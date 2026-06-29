@@ -8,7 +8,8 @@ from app.models.identity.organization_settings import OrganizationSettings
 from app.models.identity.refresh_token import RefreshToken
 from app.models.identity.role import Role
 from app.models.identity.user import User
-
+from datetime import datetime
+from uuid import UUID
 
 class AuthRepository:
 
@@ -110,6 +111,13 @@ class AuthRepository:
         self.db.add(refresh_token)
         self.db.flush()
         return refresh_token
+    
+    def update_last_login(
+    self,
+    user: User,
+    ):
+     user.last_login = datetime.utcnow()
+     self.db.flush()
 
     # -------------------------
     # Transactions
@@ -125,4 +133,14 @@ class AuthRepository:
         statement = select(Role).where(
         Role.id == role_id
     )
+        return self.db.scalar(statement)
+    def get_user_by_id(
+    self,
+    user_id: UUID | str,
+) -> User | None:
+
+        statement = select(User).where(
+        User.id == user_id
+    )
+
         return self.db.scalar(statement)

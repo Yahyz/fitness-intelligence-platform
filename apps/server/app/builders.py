@@ -77,3 +77,18 @@ def build_refresh_token(
         + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
         revoked=False,
     )
+
+def build_client_profile(
+    user_id,
+    first_name: str,
+    last_name: str,
+    phone: str | None = None,
+):
+    from app.models.identity.client_profile import ClientProfile
+
+    return ClientProfile(
+        user_id=user_id,
+        first_name=first_name,
+        last_name=last_name,
+        phone=phone,
+    )

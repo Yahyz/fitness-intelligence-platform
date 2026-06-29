@@ -10,24 +10,28 @@ from app.builders import (
 )
 from app.core.exceptions import (
     EmailAlreadyExistsError,
+    InvalidCredentialsError,
+    InactiveUserError,
     RoleNotFoundError,
 )
-from app.modules.auth.repository import AuthRepository
-from app.modules.auth.schemas import (
-    RegisterOrganizationRequest,
-    TokenResponse,
-    AuthUserResponse,
-)
-from app.shared.slug import generate_unique_slug
-from app.core.security import hash_password
-
 from app.core.security import (
     create_access_token,
     create_refresh_token,
     hash_password,
+    verify_password,
 )
+from app.modules.auth.repository import AuthRepository
+from app.modules.auth.schemas import (
+    AuthUserResponse,
+    LoginRequest,
+    RegisterOrganizationRequest,
+    TokenResponse,
+)
+from app.shared.slug import generate_unique_slug
+
 
 class AuthService:
+
     def __init__(self, db: Session):
         self.db = db
         self.repository = AuthRepository(db)
@@ -36,48 +40,29 @@ class AuthService:
         self,
         request: RegisterOrganizationRequest,
     ) -> TokenResponse:
-        """
-        Register a new organization and its owner.
-        Commit 1: Validation only.
-        """
 
-        # -----------------------------
-        # Validate email
-        # -----------------------------
         if self.repository.email_exists(request.email):
             raise EmailAlreadyExistsError(
                 f"Email '{request.email}' is already registered."
             )
 
-        # -----------------------------
-        # Validate Owner role
-        # -----------------------------
-        owner_role = self.repository.get_role_by_name("Owner")
+        owner_role = self.repository.get_role_by_name(
+            "Owner"
+        )
 
         if owner_role is None:
             raise RoleNotFoundError(
                 "Owner role not found."
             )
 
-        # -----------------------------
-        # Generate organization slug
-        # -----------------------------
         slug = generate_unique_slug(
             request.organization_name,
             self.repository,
         )
 
-               # -----------------------------
-        # Hash password
-        # -----------------------------
-
         password_hash = hash_password(
             request.password
         )
-
-        # -----------------------------
-        # Create Organization
-        # -----------------------------
 
         organization = build_organization(
             name=request.organization_name,
@@ -88,10 +73,6 @@ class AuthService:
             organization
         )
 
-        # -----------------------------
-        # Create Organization Settings
-        # -----------------------------
-
         organization_settings = build_organization_settings(
             organization.id
         )
@@ -99,10 +80,6 @@ class AuthService:
         self.repository.create_organization_settings(
             organization_settings
         )
-
-        # -----------------------------
-        # Create User
-        # -----------------------------
 
         user = build_user(
             email=request.email,
@@ -112,10 +89,6 @@ class AuthService:
         user = self.repository.create_user(
             user
         )
-
-        # -----------------------------
-        # Create Coach Profile
-        # -----------------------------
 
         coach_profile = build_coach_profile(
             user_id=user.id,
@@ -128,10 +101,6 @@ class AuthService:
             coach_profile
         )
 
-        # -----------------------------
-        # Create Membership
-        # -----------------------------
-
         membership = build_membership(
             organization_id=organization.id,
             user_id=user.id,
@@ -141,10 +110,6 @@ class AuthService:
         self.repository.create_membership(
             membership
         )
-
-        # -----------------------------
-        # Generate tokens
-        # -----------------------------
 
         access_token = create_access_token(
             subject=str(user.id),
@@ -161,25 +126,83 @@ class AuthService:
             refresh_token
         )
 
-        # -----------------------------
-        # Commit transaction
-        # -----------------------------
+        self.repository.commit()
+
+        return TokenResponse(
+            access_token=access_token,
+            refresh_token=refresh_token_value,
+            user=AuthUserResponse(
+                id=str(user.id),
+                email=user.email,
+                first_name=coach_profile.first_name,
+                last_name=coach_profile.last_name,
+                organization=organization.name,
+                role=owner_role.name,
+            ),
+        )
+
+    def login(
+        self,
+        request: LoginRequest,
+    ) -> TokenResponse:
+
+        user = self.repository.get_user_by_email(
+            request.email
+        )
+
+        if user is None:
+            raise InvalidCredentialsError(
+                "Invalid email or password."
+            )
+
+        if not verify_password(
+            request.password,
+            user.password_hash,
+        ):
+            raise InvalidCredentialsError(
+                "Invalid email or password."
+            )
+
+        if not user.is_active:
+            raise InactiveUserError(
+                "Account is inactive."
+            )
+
+        membership = user.organization_memberships[0]
+        organization = membership.organization
+        role = membership.role
+        coach = user.coach_profile
+
+        access_token = create_access_token(
+            subject=str(user.id),
+        )
+
+        refresh_token_value = create_refresh_token()
+
+        refresh_token = build_refresh_token(
+            user_id=user.id,
+            token=refresh_token_value,
+        )
+
+        self.repository.create_refresh_token(
+            refresh_token
+        )
+
+        self.repository.update_last_login(
+            user
+        )
 
         self.repository.commit()
 
-        # -----------------------------
-        # Return response
-        # -----------------------------
-
         return TokenResponse(
-    access_token=access_token,
-    refresh_token=refresh_token_value,
-    user=AuthUserResponse(
-        id=str(user.id),
-        email=user.email,
-        first_name=coach_profile.first_name,
-        last_name=coach_profile.last_name,
-        organization=organization.name,
-        role=owner_role.name,
-    ),
-)
+            access_token=access_token,
+            refresh_token=refresh_token_value,
+            user=AuthUserResponse(
+                id=str(user.id),
+                email=user.email,
+                first_name=coach.first_name,
+                last_name=coach.last_name,
+                organization=organization.name,
+                role=role.name,
+            ),
+        )

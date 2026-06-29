@@ -27,6 +27,17 @@ class RegisterOrganizationRequest(BaseModel):
     phone: str | None = None
 
 
+class UserResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    email: EmailStr
+    first_name: str
+    last_name: str
+    organization: str
+    role: str
+
+
 class LoginRequest(BaseModel):
     email: EmailStr
 
@@ -49,11 +60,3 @@ class TokenResponse(BaseModel):
     refresh_token: str
     token_type: str = "bearer"
     user: AuthUserResponse
-
-class UserResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: str
-    email: EmailStr
-    is_active: bool
-    is_verified: bool
