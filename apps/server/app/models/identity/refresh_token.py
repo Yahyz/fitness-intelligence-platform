@@ -40,6 +40,12 @@ class RefreshToken(Base):
         nullable=False,
     )
 
+    created_at: Mapped[datetime] = mapped_column(
+    DateTime(timezone=True),
+    default=datetime.utcnow,
+    nullable=False,
+)
+
     user = relationship(
         "User",
         back_populates="refresh_tokens",

@@ -37,4 +37,7 @@ class OrganizationSettings(Base):
         default=True,
     )
 
-    organization = relationship("Organization")
+    organization = relationship(
+    "Organization",
+    back_populates="settings",
+)

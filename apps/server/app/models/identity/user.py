@@ -64,10 +64,11 @@ class User(Base):
 
 
     organization_memberships = relationship(
-        "OrganizationMember",
-        back_populates="user",
-        cascade="all, delete-orphan",
-    )
+    "OrganizationMember",
+    back_populates="user",
+    cascade="all, delete-orphan",
+    foreign_keys="OrganizationMember.user_id",
+)
 
     coach_profile = relationship(
         "CoachProfile",

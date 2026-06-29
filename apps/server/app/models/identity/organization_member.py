@@ -68,6 +68,11 @@ class OrganizationMember(Base):
 )
 
     user = relationship(
-        "User",
-        back_populates="organization_memberships",
-    )
+    "User",
+    back_populates="organization_memberships",
+    foreign_keys=[user_id],
+)
+    invited_by_user = relationship(
+    "User",
+    foreign_keys=[invited_by],
+)
