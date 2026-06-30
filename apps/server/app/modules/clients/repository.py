@@ -6,6 +6,11 @@ from app.models.identity.organization_member import OrganizationMember
 from app.models.identity.refresh_token import RefreshToken
 from app.models.identity.role import Role
 from app.models.identity.user import User
+from sqlalchemy.orm import joinedload
+from uuid import UUID
+
+from app.models.identity.client_profile import ClientProfile
+from app.models.identity.organization_member import OrganizationMember
 
 
 class ClientRepository:
@@ -87,3 +92,63 @@ class ClientRepository:
 
     def rollback(self):
         self.db.rollback()
+
+    def get_clients_by_organization(
+        self,
+        organization_id,
+    ) -> list[OrganizationMember]:
+
+        statement = (
+            select(OrganizationMember)
+            .options(
+                joinedload(OrganizationMember.user)
+                .joinedload(User.client_profile)
+        )
+            .where(
+                OrganizationMember.organization_id == organization_id
+        )
+            .join(Role)
+            .where(Role.name == "Client")
+    )
+
+        return list(self.db.scalars(statement).all())
+    
+    def get_client_by_id(
+    self,
+    client_id: UUID | str,
+    organization_id,
+    ) -> OrganizationMember | None:
+
+        statement = (
+            select(OrganizationMember)
+            .options(
+                joinedload(OrganizationMember.user)
+                .joinedload(User.client_profile)
+            )
+            .join(OrganizationMember.role)
+            .where(
+                OrganizationMember.user_id == client_id,
+                OrganizationMember.organization_id == organization_id,
+                Role.name == "Client",
+        )
+    )
+
+        return self.db.scalar(statement)
+    
+    def update_client_profile(
+    self,
+    profile: ClientProfile,
+    ):
+        self.db.flush()
+        return profile
+    
+    def deactivate_user(
+    self,
+    user: User,
+) -> User:
+
+        user.is_active = False
+
+        self.db.flush()
+
+        return user

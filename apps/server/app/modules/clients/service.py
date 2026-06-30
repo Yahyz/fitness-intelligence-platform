@@ -11,6 +11,7 @@ from app.modules.clients.repository import ClientRepository
 from app.modules.clients.schemas import (
     ClientResponse,
     CreateClientRequest,
+    UpdateClientRequest,
 )
 from app.core.exceptions import (
     ClientAlreadyExistsError,
@@ -130,3 +131,144 @@ class ClientService:
             phone=profile.phone,
             is_active=user.is_active,
         )
+
+    def list_clients(
+        self,
+        current_user,
+    ) -> list[ClientResponse]:
+
+        organization = (
+            current_user.organization_memberships[0]
+            .organization
+    )
+
+        memberships = self.repository.get_clients_by_organization(
+            organization.id
+    )
+
+        clients = []
+
+        for membership in memberships:
+
+            user = membership.user
+        profile = user.client_profile
+
+        clients.append(
+            ClientResponse(
+                id=user.id,
+                first_name=profile.first_name,
+                last_name=profile.last_name,
+                email=user.email,
+                phone=profile.phone,
+                is_active=user.is_active,
+            )
+        )
+
+        return clients
+    def get_client(
+    self,
+    client_id,
+    current_user,
+    ) -> ClientResponse:
+
+        organization = (
+            current_user.organization_memberships[0]
+            .organization
+    )
+
+        membership = self.repository.get_client_by_id(
+            client_id,
+            organization.id,
+    )
+
+        if membership is None:
+            raise ValueError("Client not found.")
+
+        user = membership.user
+        profile = user.client_profile
+
+        return ClientResponse(
+            id=user.id,
+            first_name=profile.first_name,
+            last_name=profile.last_name,
+            email=user.email,
+            phone=profile.phone,
+            is_active=user.is_active,
+    )
+
+    def update_client(
+        self,
+        client_id,
+        request: UpdateClientRequest,
+        current_user,
+    ) -> ClientResponse:
+
+        organization = (
+            current_user.organization_memberships[0]
+            .organization
+    )
+
+        membership = self.repository.get_client_by_id(
+            client_id,
+            organization.id,
+    )
+
+        if membership is None:
+            raise ValueError("Client not found.")
+
+        user = membership.user
+        profile = user.client_profile
+
+        if request.first_name is not None:
+            profile.first_name = request.first_name
+
+        if request.last_name is not None:
+            profile.last_name = request.last_name
+
+        if request.phone is not None:
+            profile.phone = request.phone
+
+        self.repository.update_client_profile(profile)
+        self.repository.commit()
+
+        return ClientResponse(
+        id=user.id,
+        first_name=profile.first_name,
+        last_name=profile.last_name,
+        email=user.email,
+        phone=profile.phone,
+        is_active=user.is_active,
+    )
+
+    def deactivate_client(
+    self,
+    client_id,
+    current_user,
+):
+
+        organization = (
+            current_user.organization_memberships[0]
+            .organization
+    )
+
+        membership = self.repository.get_client_by_id(
+            client_id,
+            organization.id,
+    )
+
+        if membership is None:
+            raise ValueError(
+                "Client not found."
+        )
+
+        user = membership.user
+
+        self.repository.deactivate_user(
+            user
+    )
+
+        self.repository.commit()
+
+        return {
+            "message": "Client deactivated successfully."
+    }

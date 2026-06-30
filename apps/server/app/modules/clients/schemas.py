@@ -19,3 +19,18 @@ class ClientResponse(BaseModel):
     email: EmailStr
     phone: str | None
     is_active: bool
+
+class UpdateClientRequest(BaseModel):
+    first_name: str | None = Field(
+        default=None,
+        min_length=2,
+        max_length=100,
+    )
+
+    last_name: str | None = Field(
+        default=None,
+        min_length=2,
+        max_length=100,
+    )
+
+    phone: str | None = None

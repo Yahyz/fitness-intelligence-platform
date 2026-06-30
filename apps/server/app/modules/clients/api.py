@@ -11,6 +11,7 @@ from app.models.identity.user import User
 from app.modules.clients.schemas import (
     ClientResponse,
     CreateClientRequest,
+    UpdateClientRequest,
 )
 from app.modules.clients.service import ClientService
 
@@ -62,3 +63,65 @@ def create_client(
     except Exception:
         db.rollback()
         raise
+@router.get(
+    "",
+    response_model=list[ClientResponse],
+)
+def list_clients(
+    current_user: User = Depends(require_coach),
+    db: Session = Depends(get_db),
+):
+    service = ClientService(db)
+
+    return service.list_clients(current_user)
+
+@router.get(
+    "/{client_id}",
+    response_model=ClientResponse,
+)
+def get_client(
+    client_id: str,
+    current_user: User = Depends(require_coach),
+    db: Session = Depends(get_db),
+):
+    service = ClientService(db)
+
+    return service.get_client(
+        client_id,
+        current_user,
+    )
+
+@router.patch(
+    "/{client_id}",
+    response_model=ClientResponse,
+)
+def update_client(
+    client_id: str,
+    request: UpdateClientRequest,
+    current_user: User = Depends(require_coach),
+    db: Session = Depends(get_db),
+):
+    service = ClientService(db)
+
+    return service.update_client(
+        client_id,
+        request,
+        current_user,
+    )
+
+@router.delete(
+    "/{client_id}",
+    status_code=status.HTTP_200_OK,
+)
+def deactivate_client(
+    client_id: str,
+    current_user: User = Depends(require_coach),
+    db: Session = Depends(get_db),
+):
+
+    service = ClientService(db)
+
+    return service.deactivate_client(
+        client_id,
+        current_user,
+    )
