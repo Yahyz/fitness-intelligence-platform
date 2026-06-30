@@ -60,14 +60,16 @@ class Exercise(Base):
         nullable=True,
     )
 
-    difficulty: Mapped[str | None] = mapped_column(
-        String(50),
-        nullable=True,
+    difficulty_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("exercise_difficulties.id"),
+        nullable=False,
     )
 
-    movement_pattern: Mapped[str | None] = mapped_column(
-        String(100),
-        nullable=True,
+    movement_pattern_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("movement_patterns.id"),
+        nullable=False,
     )
 
     video_url: Mapped[str | None] = mapped_column(
@@ -111,4 +113,13 @@ class Exercise(Base):
         "ExerciseEquipment",
         back_populates="exercise",
         cascade="all, delete-orphan",
+    )
+    difficulty = relationship(
+        "ExerciseDifficulty",
+        back_populates="exercises",
+    )
+
+    movement_pattern = relationship(
+        "MovementPattern",
+        back_populates="exercises",
     )

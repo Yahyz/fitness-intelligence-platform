@@ -8,6 +8,7 @@ from .profile_builder import (
     build_coach_profile,
 )
 from .token_builder import build_refresh_token
+from .exercise_builder import build_exercise
 from .user_builder import build_user
 
 __all__ = [
@@ -18,4 +19,5 @@ __all__ = [
     "build_client_profile",
     "build_membership",
     "build_refresh_token",
+    "build_exercise",
 ]

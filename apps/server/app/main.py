@@ -4,6 +4,9 @@ from app.core.security import hash_password
 from app.db.session import engine
 from app.modules.auth.api import router as auth_router
 from app.modules.clients.api import router as clients_router
+from app.modules.exercises.api import (
+    router as exercise_router,
+)
 
 
 app = FastAPI(
@@ -12,6 +15,7 @@ app = FastAPI(
 )
 app.include_router(auth_router)
 app.include_router(clients_router)
+app.include_router(exercise_router)
 
 
 @app.get("/")
